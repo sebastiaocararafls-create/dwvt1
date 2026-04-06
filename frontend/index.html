@@ -1,0 +1,285 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Fortlev Solar | Dimensionador</title>
+
+  <style>
+    #app { display: none; }
+    #login { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+
+    body { margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background:#f6f7fb; color:#0f172a; }
+    .card { background:#fff; border:1px solid #e5e7eb; border-radius:16px; padding:16px; }
+    .login-card { width:min(420px, 100%); }
+    label { display:block; margin-top:10px; font-weight:700; font-size:13px; color:#334155; }
+    input, select { width:100%; padding:10px 12px; border-radius:12px; border:1px solid #e5e7eb; margin-top:6px; box-sizing:border-box; }
+    .btn { padding:10px 12px; border-radius:12px; border:1px solid #e5e7eb; background:#fff; cursor:pointer; }
+    .btn.primary { background:#111827; color:#fff; border-color:#111827; }
+    .muted { color:#64748b; }
+    .msg { white-space:pre-wrap; padding:10px 12px; border-radius:12px; border:1px solid #e5e7eb; background:#f8fafc; margin:12px 0; }
+    .msg.ok { border-color:#86efac; background:#f0fdf4; color:#166534; }
+    .msg.warn { border-color:#fcd34d; background:#fffbeb; color:#92400e; }
+    .msg.bad { border-color:#fca5a5; background:#fef2f2; color:#991b1b; }
+
+    .topbar { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin:16px 0; }
+    .dot { width:10px; height:10px; border-radius:999px; background:#94a3b8; display:inline-block; }
+    .container { max-width:1100px; margin:0 auto; padding:0 16px 28px; }
+
+    .grid { display:grid; gap:12px; }
+    .grid-2 { grid-template-columns:repeat(2, minmax(0,1fr)); }
+    .grid-3 { grid-template-columns:repeat(3, minmax(0,1fr)); }
+    @media (max-width:900px){ .grid-2, .grid-3 { grid-template-columns:1fr; } }
+
+    .row { display:flex; gap:10px; flex-wrap:wrap; }
+    .field { display:flex; flex-direction:column; gap:6px; min-width:220px; flex:1; }
+
+    .tabs { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+    .tab { padding:10px 12px; border-radius:999px; border:1px solid #e5e7eb; background:#fff; cursor:pointer; }
+    .tab.active { background:#111827; color:#fff; border-color:#111827; }
+    .pane { display:none; margin-top:12px; }
+    .pane.active { display:block; }
+
+    table { width:100%; border-collapse:collapse; }
+    th, td { border-bottom:1px solid #e5e7eb; padding:10px; text-align:center; }
+    th { background:#f8fafc; color:#334155; font-weight:700; }
+    tr.best { background:#f0fdf4; }
+
+    .badge { display:inline-block; padding:6px 10px; border-radius:999px; font-weight:800; font-size:12px; border:1px solid #e5e7eb; }
+    .badge.ok { background:#dcfce7; color:#166534; border-color:#86efac; }
+    .badge.warn { background:#fffbeb; color:#92400e; border-color:#fcd34d; }
+    .badge.bad { background:#fef2f2; color:#991b1b; border-color:#fca5a5; }
+
+    pre { background:#0b1020; color:#e5e7eb; padding:12px; border-radius:12px; overflow:auto; }
+
+    .box { border:1px solid #e5e7eb; border-radius:16px; padding:12px; margin-top:12px; background:#fff; }
+    .box h4 { margin:0 0 10px; }
+    .kv td { text-align:left; }
+    .kv td.k { width:42%; color:#334155; font-weight:700; }
+    .kv td.v { color:#0f172a; }
+  </style>
+</head>
+
+<body>
+  <!-- LOGIN -->
+  <div id="login">
+    <div class="card login-card">
+      <h2 style="margin:0 0 8px;">Entrar</h2>
+      <div class="muted">Acesso restrito (admin / engenharia).</div>
+
+      <label for="loginUser">Usuário</label>
+      <input id="loginUser" type="text" autocomplete="username" />
+
+      <label for="loginPass">Senha</label>
+      <input id="loginPass" type="password" autocomplete="current-password" />
+
+      <button id="btnLogin" class="btn primary" type="button" style="margin-top:12px; width:100%;">Entrar</button>
+      <div id="loginMsg" class="muted" style="margin-top:10px;"></div>
+    </div>
+  </div>
+
+  <!-- APP -->
+  <div id="app">
+    <div class="container">
+      <div class="topbar">
+        <div>
+          <div style="font-weight:900;">Fortlev Solar</div>
+          <div class="muted">Dimensionador de Sistemas</div>
+        </div>
+
+        <div class="row" style="align-items:center;">
+          <span id="apiDot" class="dot" aria-hidden="true"></span>
+          <span id="apiStatus" class="muted">API: verificando…</span>
+          <span id="whoami" class="muted" style="margin-left:12px;"></span>
+          <button id="btnLogout" class="btn" type="button">Sair</button>
+        </div>
+      </div>
+
+      <div id="msg" class="msg"></div>
+
+      <div class="grid grid-2">
+        <section class="card">
+          <h3 style="margin:0 0 10px;">Módulo Fotovoltaico</h3>
+          <div class="row">
+            <div class="field">
+              <label for="fabMod">Fabricante</label>
+              <select id="fabMod"></select>
+            </div>
+            <div class="field">
+              <label for="modeloMod">Modelo</label>
+              <select id="modeloMod"></select>
+            </div>
+            <div class="field">
+              <label for="kwpSis">Potência do sistema (kWp)</label>
+              <input id="kwpSis" type="number" step="0.01" value="10" />
+            </div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h3 style="margin:0 0 10px;">Inversor</h3>
+          <div class="row">
+            <div class="field">
+              <label for="fabInv">Fabricante</label>
+              <select id="fabInv"></select>
+            </div>
+            <div class="field">
+              <label for="modeloInv">Modelo</label>
+              <select id="modeloInv"></select>
+            </div>
+            <div class="field">
+              <label for="qtdInv">Qtd inversores</label>
+              <input id="qtdInv" type="number" step="1" value="1" min="1" />
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <section class="card" style="margin-top:12px;">
+        <h3 style="margin:0 0 10px;">Configurações adicionais</h3>
+        <div class="row">
+          <div class="field">
+            <label for="tamString">Tamanho da string (opcional)</label>
+            <input id="tamString" type="number" step="1" min="1" />
+          </div>
+          <div class="field">
+            <label for="entradasUsadas">Entradas usadas (opcional)</label>
+            <input id="entradasUsadas" type="number" step="1" min="1" />
+          </div>
+          <div class="field">
+            <label for="tmin">Temp. mín (°C)</label>
+            <input id="tmin" type="number" step="0.1" value="0" />
+          </div>
+          <div class="field">
+            <label for="tmax">Temp. máx (°C)</label>
+            <input id="tmax" type="number" step="0.1" value="50" />
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:12px;">
+          <button id="btnCalcular" class="btn primary" type="button">Calcular</button>
+          <button id="btnLimpar" class="btn" type="button">Limpar</button>
+        </div>
+      </section>
+
+      <!-- Cards (evita null.textContent) -->
+      <section class="grid grid-3" style="margin-top:12px;">
+        <div class="card"><div class="muted">kWp / inversor</div><div style="font-size:22px;font-weight:900" id="mPotInv">—</div></div>
+        <div class="card"><div class="muted">kWp sistema</div><div style="font-size:22px;font-weight:900" id="mPotSis">—</div></div>
+        <div class="card"><div class="muted">Diferença (kWp)</div><div style="font-size:22px;font-weight:900" id="mDif">—</div></div>
+        <div class="card"><div class="muted">Tam string</div><div style="font-size:22px;font-weight:900" id="mTam">—</div></div>
+        <div class="card"><div class="muted">Qtd strings</div><div style="font-size:22px;font-weight:900" id="mQtd">—</div></div>
+        <div class="card"><div class="muted">Total módulos</div><div style="font-size:22px;font-weight:900" id="mTotal">—</div></div>
+        <div class="card"><div class="muted">Overload (%)</div><div style="font-size:22px;font-weight:900" id="mOv">—</div></div>
+        <div class="card"><div class="muted">Overload máx (%)</div><div style="font-size:22px;font-weight:900" id="mOvMax">—</div></div>
+        <div class="card"><div class="muted">&nbsp;</div><div style="font-size:22px;font-weight:900">&nbsp;</div></div>
+      </section>
+
+      <!-- Tabs -->
+      <nav class="tabs" aria-label="Seções">
+        <button class="tab active" data-tab="sugestao" type="button">Sugestão</button>
+        <button class="tab" data-tab="criterios" type="button">Critérios</button>
+        <button class="tab" data-tab="resumo" type="button">Resumo</button>
+        <button class="tab" data-tab="cadastro" type="button">Cadastro de Usuário</button>
+      </nav>
+
+      <section id="pane-sugestao" class="pane active">
+        <div class="card">
+          <h3 style="margin:0 0 10px;">Melhor configuração</h3>
+          <table id="tblMelhor">
+            <thead>
+              <tr><th>Tam string</th><th>Qtd strings</th><th>Total módulos</th><th>kWp (inv)</th><th>Dif (kWp)</th></tr>
+            </thead>
+            <tbody><tr><td colspan="5" class="muted">—</td></tr></tbody>
+          </table>
+        </div>
+
+        <div class="card" style="margin-top:12px;">
+          <h3 style="margin:0 0 10px;">Combinações (clique para selecionar)</h3>
+          <table id="tblCombos">
+            <thead><tr><th>#</th><th>Tam</th><th>Strings</th><th>Total</th><th>kWp</th><th>Dif</th><th>Overload</th></tr></thead>
+            <tbody><tr><td colspan="7" class="muted">—</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="pane-criterios" class="pane">
+        <div class="card">
+          <h3 style="margin:0 0 10px;">Análise de critérios</h3>
+          <table id="tblCriterios">
+            <thead><tr><th style="text-align:left;">Critério</th><th>Status</th></tr></thead>
+            <tbody><tr><td colspan="2" class="muted">—</td></tr></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="pane-resumo" class="pane">
+        <div class="card">
+          <h3 style="margin:0 0 10px;">Resumo do cálculo</h3>
+          <div id="resumo" class="muted">—</div>
+        </div>
+
+        <div class="card" style="margin-top:12px;">
+          <h3 style="margin:0 0 10px;">Debug (JSON completo)</h3>
+          <pre id="raw">—</pre>
+        </div>
+      </section>
+
+      <!-- NOVA ABA: Cadastro -->
+      <section id="pane-cadastro" class="pane">
+        <div class="card">
+          <h3 style="margin:0 0 10px;">Cadastro de Usuário</h3>
+          <div id="cadastroGate" class="msg warn" style="display:none;">
+            Apenas ADMIN pode cadastrar usuários.
+          </div>
+
+          <div id="cadastroBox" style="display:none;">
+            <div class="row">
+              <div class="field">
+                <label for="newUserName">Usuário</label>
+                <input id="newUserName" />
+              </div>
+
+              <div class="field">
+                <label for="newUserPass">Senha</label>
+                <input id="newUserPass" type="password" />
+              </div>
+
+              <div class="field">
+                <label for="newUserRole">Permissão</label>
+                <select id="newUserRole">
+                  <option value="engenharia">engenharia</option>
+                  <option value="comercial">comercial</option>
+                  <option value="admin">admin</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="row" style="margin-top:12px;">
+              <button id="btnCreateUser" class="btn primary" type="button">Criar usuário</button>
+              <button id="btnReloadUsers" class="btn" type="button">Atualizar lista</button>
+            </div>
+
+            <div id="usersMsg" class="muted" style="margin-top:10px;"></div>
+
+            <div class="box">
+              <h4>Usuários cadastrados</h4>
+              <table id="tblUsers">
+                <thead>
+                  <tr><th>ID</th><th>Usuário</th><th>Role</th><th>Ativo</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td colspan="4" class="muted">—</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+  <script src="/app.js" defer></script>
+</body>
+</html>
